@@ -4,8 +4,10 @@ import {
   forwardRef,
   useEffect,
   useRef,
+  useState,
 } from 'react';
 import { addScrollableNode, removeScrollableNode } from '../common/events';
+import { Icon } from './Icon';
 import { canRender, classes } from '../common/react';
 import { computeBoxClassName, computeBoxProps } from '../common/ui';
 import type { BoxProps } from './Box';
@@ -15,6 +17,8 @@ type Props = Partial<{
   buttons: ReactNode;
   /** id to assosiate with the parent div element used by this section, for uses with procs like getElementByID */
   container_id: string;
+  /** If true, allows collapsing the sections by clicking on the title box **/
+  collapsible: boolean;
   /** If true, fills all available vertical space. */
   fill: boolean;
   /** If true, removes all section padding. */
@@ -33,6 +37,8 @@ type Props = Partial<{
   stretchContents: boolean;
   /** Title of the section. */
   title: ReactNode;
+  /** If true, indicates the initial collapsed state */
+  collapsed: boolean;
 }> &
   BoxProps;
 
@@ -69,6 +75,8 @@ export const Section = forwardRef(
       buttons,
       children,
       className,
+      collapsible,
+      collapsed: initialCollapsed,
       container_id = '',
       fill,
       fitted,
@@ -84,6 +92,8 @@ export const Section = forwardRef(
 
     const internalRef = useRef<HTMLDivElement>(null);
     const nodeRef = forwardedRef || internalRef;
+
+    const [isCollapsed, setIsCollapsed] = useState(initialCollapsed || false);
 
     const hasTitle = canRender(title) || canRender(buttons);
 
@@ -102,6 +112,12 @@ export const Section = forwardRef(
       };
     }, []);
 
+    const handleTitleClick = () => {
+      if (collapsible) {
+        setIsCollapsed(!isCollapsed);
+      }
+    };
+
     return (
       <div
         id={container_id}
@@ -112,13 +128,21 @@ export const Section = forwardRef(
           scrollable && 'Section--scrollable',
           scrollableHorizontal && 'Section--scrollableHorizontal',
           flexGrow && 'Section--flex',
+          isCollapsed && 'Section--collapsed',
+          collapsible && 'Section--collapsible',
           className,
           computeBoxClassName(rest),
         ])}
         {...computeBoxProps(rest)}
       >
         {hasTitle && (
-          <div className="Section__title">
+          <div className="Section__title" onClick={collapsible ? handleTitleClick : undefined}>
+              {collapsible && (
+                <Icon
+                  name="angle-down"
+                  className="Section__collapseIcon"
+                />
+              )}
             <span className="Section__titleText">{title}</span>
             <div className="Section__buttons">{buttons}</div>
           </div>
