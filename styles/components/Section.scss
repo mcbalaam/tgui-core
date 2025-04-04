@@ -172,7 +172,7 @@ $separator-color: colors.$primary !default;
 }
 
 .Section > .Section__rest {
-  max-height: 500px;
+  max-height: unset;
   opacity: 1;
   transform: translateY(0);
   transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
