@@ -7,10 +7,10 @@ import {
   useState,
 } from 'react';
 import { addScrollableNode, removeScrollableNode } from '../common/events';
-import { Icon } from './Icon';
 import { canRender, classes } from '../common/react';
 import { computeBoxClassName, computeBoxProps } from '../common/ui';
 import type { BoxProps } from './Box';
+import { Icon } from './Icon';
 
 type Props = Partial<{
   /** Buttons to render aside the section title. */
@@ -90,12 +90,18 @@ export const Section = forwardRef(
       ...rest
     } = props;
 
+    const [isCollapsed, setIsCollapsed] = useState(initialCollapsed || false);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const contentRef = useRef<HTMLDivElement>(null);
+
     const internalRef = useRef<HTMLDivElement>(null);
     const nodeRef = forwardedRef || internalRef;
 
-    const [isCollapsed, setIsCollapsed] = useState(initialCollapsed || false);
-
-    const hasTitle = canRender(title) || canRender(buttons);
+    const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+      if (e.propertyName === 'max-height') {
+        setIsAnimating(false);
+      }
+    };
 
     useEffect(() => {
       // Don't use early returns here as we're in useEffect
@@ -113,14 +119,17 @@ export const Section = forwardRef(
     }, []);
 
     const handleTitleClick = () => {
-      if (collapsible) {
+      if (collapsible && !isAnimating) {
+        setIsAnimating(true);
         setIsCollapsed(!isCollapsed);
       }
     };
 
+    const hasTitle = canRender(title) || canRender(buttons);
+
+
     return (
       <div
-        id={container_id}
         className={classes([
           'Section',
           fill && 'Section--fill',
@@ -135,29 +144,49 @@ export const Section = forwardRef(
         ])}
         {...computeBoxProps(rest)}
       >
-        {hasTitle && (
-          <div className="Section__title" onClick={collapsible ? handleTitleClick : undefined}>
-              {collapsible && (
-                <Icon
-                  name="angle-down"
-                  className="Section__collapseIcon"
-                />
-              )}
+ {hasTitle && (
+          <div
+            className="Section__title"
+            onClick={handleTitleClick}
+            onKeyDown={
+              collapsible
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleTitleClick();
+                    }
+                  }
+                : undefined
+            }
+            role={collapsible ? 'button' : undefined}
+            tabIndex={collapsible ? 0 : undefined}
+          >
+            {collapsible && (
+              <Icon name="angle-down" className="Section__collapseIcon" />
+            )}
             <span className="Section__titleText">{title}</span>
             <div className="Section__buttons">{buttons}</div>
           </div>
         )}
-        <div className="Section__rest">
+<div
+  ref={contentRef}
+  className="Section__rest"
+  onTransitionEnd={handleTransitionEnd}
+  style={{
+    maxHeight: collapsible
+      ? isCollapsed
+        ? '0'
+        : `${contentRef.current?.scrollHeight}px`
+      : undefined,
+  }}
+>
           <div
+            ref={contentRef}
             className={classes([
               'Section__content',
               stretchContents && 'Section__content--stretchContents',
               noTopPadding && 'Section__content--noTopPadding',
             ])}
             onScroll={onScroll}
-            // For posterity: the forwarded ref needs to be here specifically
-            // to actually let things interact with the scrolling.
-            ref={nodeRef}
           >
             {children}
           </div>
